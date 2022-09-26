@@ -1,9 +1,9 @@
 Flutter App: Contact list
 
 Storyline: <br/>
-[] contacts list sorted based on the time: <br/>
+[x] contacts list sorted based on the time: <br/>
     [x] time displayed in format of “time ago” <br/>
-    [] ordering of list starts from most recent to oldest <br/>
+    [x] ordering of list starts from most recent to oldest <br/>
 [] displays half of data (out of 30 sets) <br/>
     [] pulling up the list to show remaining data <br/>
 [] pull-to-refresh to generate 5 random data to add to list <br/>
