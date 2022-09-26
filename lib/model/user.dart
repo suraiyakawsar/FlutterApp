@@ -1,7 +1,7 @@
 class User {
   final String username;
   final String phone;
-  final String checkin;
+  final DateTime checkin;
   final String urlAvatar;
 
   const User({
@@ -12,9 +12,9 @@ class User {
   });
 
   static User fromJson(json) => User(
-    username: json['username'],
-    phone: json['phone'],
-    checkin: json['checkin'],
-    urlAvatar: json['urlAvatar'],
-  );
+        username: json['username'],
+        phone: json['phone'],
+        checkin: DateTime.parse(json['checkin']),
+        urlAvatar: json['urlAvatar'],
+      );
 }
