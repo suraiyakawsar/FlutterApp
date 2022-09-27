@@ -1,10 +1,10 @@
 class User {
-  final String username;
-  final String phone;
-  final DateTime checkin;
-  final String urlAvatar;
+  String username;
+  String phone;
+  DateTime checkin;
+  String urlAvatar;
 
-  const User({
+  User({
     required this.username,
     required this.phone,
     required this.checkin,
