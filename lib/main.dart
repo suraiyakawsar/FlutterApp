@@ -51,7 +51,9 @@ class _MainPageState extends State<MainPage> {
     ];
 
     _user = data.map<User>(User.fromJson).toList();
-    _user.sort((a,b){return (b.checkin).compareTo(a.checkin);});
+    _user.sort((a, b) {
+      return (b.checkin).compareTo(a.checkin);
+    });
     return _user;
   }
 
@@ -66,22 +68,25 @@ class _MainPageState extends State<MainPage> {
             Center(
               child: buildUsers(users),
             ),
-            Positioned.fill(
-              child: Container(
-                margin: EdgeInsets.all(10.0),
-                padding: EdgeInsets.all(10.0),
-                height: 50,
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: _toggleButtons(),
-                ),
+            Container(
+              margin: const EdgeInsets.all(10.0),
+              padding: const EdgeInsets.all(10.0),
+              height: 50,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: _toggleButtons(),
               ),
             ),
           ],
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {},
-          child: const Icon(Icons.add),
+          child: ClipRect(
+            child: Align(
+              heightFactor: 0.5,
+              child: _toggleButtons(),
+            ),
+          ),
         ),
       );
 
@@ -115,6 +120,8 @@ class _MainPageState extends State<MainPage> {
           },
         ),
       );
+
+
 
   _toggleButtons() {
     return ToggleButtons(
