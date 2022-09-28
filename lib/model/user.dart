@@ -8,12 +8,6 @@ class User {
     required this.phone,
     required this.checkin,
   });
-
-  // static User fromJson(json) => User(
-  //       username: json['username'],
-  //       phone: json['phone'],
-  //       checkin: DateTime.parse(json['checkin']),
-  //     );
 }
 
 List<User> allUsers = [
