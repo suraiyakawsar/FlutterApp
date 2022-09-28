@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:my_app/widget/loading_widget.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../contact_list.dart';
 import '../model/user.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,114 +13,150 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<List<User>> usersFuture;
+  late SharedPreferences prefs;
   bool isSwitched = false;
-  int half = 0;
+  List<User> users = [];
+  int newItemCount = 15;
+  late Future loading;
+
+  getSwitchValue() async {
+    prefs = await SharedPreferences.getInstance();
+    bool? prevIsSwitched = prefs.getBool('isSwitched');
+    if (prevIsSwitched == null) {
+      isSwitched = false;
+    } else {
+      isSwitched = prevIsSwitched;
+    }
+  }
 
   @override
   void initState() {
-    super.initState();
-    usersFuture = getUsers(context);
-  }
+    getSwitchValue();
 
-  Future<List<User>> getUsers(BuildContext context) async {
-    List<User> user = [];
-
-    // brings in data from the asset folder, json file
-    final assetBundle = DefaultAssetBundle.of(context);
-    final data = await assetBundle.loadString('assets/users.json');
-
-    var list = json.decode(data);
-    user = await list.map<User>(User.fromJson).toList();
-
-    //shows half the data of the ones available, 5 in my case since data is 10
-    half = (user.length / 2).round();
-
-    //to sort list recent to old acc. to checkin time
-    user.sort((a, b) {
+    users = allUsers;
+    users.sort((a, b) {
       return (b.checkin).compareTo(a.checkin);
     });
-    return user;
+    loading = _buildFuture();
+    super.initState();
+  }
+
+  RefreshController _refreshController = RefreshController(initialRefresh: false);
+
+  Future<void> _buildFuture() async {
+    await Future.delayed(const Duration(milliseconds: 3000));
+    print("Future");
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Contacts'),
-          centerTitle: true,
-          actions: [
-            Switch(
-              value: isSwitched,
-              activeColor: Colors.black,
-              onChanged: (bool value) {
-                setState(() {
-                  isSwitched = value;
-                });
-              },
-            ),
-          ],
-        ),
-        body: Center(
-          child: FutureBuilder<List<User>>(
-            future: usersFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator();
-              } else if (snapshot.hasError) {
-                return Text(
-                  '😢 ${snapshot.error}',
-                  style: const TextStyle(fontSize: 20),
-                );
-              } else if (snapshot.hasData) {
-                final users = snapshot.data!;
-                return buildUsers(users);
-              } else {
-                return const Text('No User Data');
-              }
-            },
-          ),
-        ),
+        appBar: buildAppBar(),
+        body: buildBody(),
       );
 
-  void share(BuildContext context, User user) {
-    final String text = "${user.username} \n ${user.phone}";
-    Share.share(text);
-  }
-
-  Future<void> _refreshUsers() async {}
-
-  Widget buildUsers(List<User> users) => RefreshIndicator(
-        onRefresh: _refreshUsers,
-        edgeOffset: 10,
-        displacement: 80,
-        strokeWidth: 3,
-        backgroundColor: Colors.red,
-        color: Colors.white,
-        child: ListView.builder(
-          itemCount: half,
-          itemBuilder: (context, index) {
-            final user = users[index];
-            final dateog = DateFormat('dd-MM-yyyy HH-mm-ss').format(user.checkin);
-            final datetimeago = timeago.format(user.checkin);
-            return Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  radius: 28,
-                  backgroundImage: NetworkImage(user.urlAvatar),
-                ),
-                title: Text(user.username),
-                subtitle: Row(
-                  children: [Text(user.phone), const Spacer(), Text(isSwitched ? datetimeago : dateog)],
-                ),
-                trailing: IconButton(
-                  onPressed: () {
-                    share(context, user);
-                  },
-                  icon: const Icon(Icons.share),
-                ),
-              ),
-            );
+  AppBar buildAppBar() {
+    return AppBar(
+      elevation: 0,
+      title: const Text('Contacts'),
+      centerTitle: true,
+      actions: [
+        Switch(
+          value: isSwitched,
+          activeColor: Colors.black,
+          onChanged: (bool value) async {
+            prefs = await SharedPreferences.getInstance();
+            setState(() {
+              isSwitched = value;
+              prefs.setBool('isSwitched', isSwitched);
+              print('Saved state is $isSwitched');
+            });
           },
         ),
-      );
+      ],
+    );
+  }
+
+  Widget buildBody() {
+    return LoadingWidget(
+        future: loading,
+        child: SmartRefresher(
+          enablePullDown: true,
+          enablePullUp: true,
+          header: const WaterDropHeader(),
+          footer: CustomFooter(
+            builder: (context, mode) {
+              Widget body;
+              if (mode == LoadStatus.idle) {
+                body = const Text("You have reached end of the list");
+              } else if (mode == LoadStatus.loading) {
+                body = const Center(child: CircularProgressIndicator());
+              } else if (mode == LoadStatus.failed) {
+                body = const Text("Load Failed! Click retry!");
+              } else if (mode == LoadStatus.canLoading) {
+                body = const Text("release to load more");
+              } else {
+                body = const Text("No more Data");
+              }
+              return SizedBox(
+                height: 55.0,
+                child: Center(child: body),
+              );
+            },
+          ),
+          controller: _refreshController,
+          onRefresh: _onRefresh,
+          onLoading: _onLoading,
+          child: _buildUsersList(),
+        ));
+  }
+
+  void _onRefresh() async {
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    setState(() {
+      if (newItemCount < users.length) {
+        newItemCount += 5;
+      } else {
+        print("no more refreshing");
+      }
+    });
+
+    _refreshController.refreshCompleted();
+  }
+
+  void _onLoading() async {
+    await Future.delayed(const Duration(milliseconds: 10));
+
+    if (mounted) {
+      setState(() {
+        if (newItemCount < users.length) {
+          newItemCount += 5;
+        } else {
+          print("no more loading");
+        }
+      });
+    }
+
+    _refreshController.refreshCompleted();
+  }
+
+  Widget _buildUsersList() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListView.builder(
+            primary: false,
+            shrinkWrap: true,
+            itemCount: newItemCount,
+            itemBuilder: (context, index) => ContactList(
+              users: users[index],
+              isSwitched: isSwitched,
+            ),
+            itemExtent: 100.00,
+          )
+        ],
+      ),
+    );
+  }
 }
