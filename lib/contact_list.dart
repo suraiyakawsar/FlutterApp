@@ -2,7 +2,9 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:flutter/material.dart';
+import 'model/model.dart';
 import 'model/user.dart';
+import 'package:http/http.dart' as http;
 
 class ContactList extends StatelessWidget {
   final User users;
@@ -54,3 +56,23 @@ class ContactList extends StatelessWidget {
     Share.share(text);
   }
 }
+
+class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Model model;
+
+  Future getDataFromApi() async{
+    final url=await http.get("url");
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Container();
+  }
+}
+
